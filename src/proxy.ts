@@ -34,7 +34,9 @@ export async function proxyToOpenCode(
     }
   }
 
-  // Add authenticated user identity headers
+  // Force backend to send uncompressed response — avoids Content-Encoding
+  // mismatch since Bun fetch doesn't reliably decompress on all platforms.
+  headers.set("Accept-Encoding", "identity")
   headers.set("X-Authenticated-User", session.username)
   headers.set("X-Authenticated-Email", session.email)
   headers.set("X-Authenticated-Name", session.name)
@@ -53,19 +55,7 @@ export async function proxyToOpenCode(
 
   try {
     const response = await fetch(proxyRequest)
-
-    // Bun fetch auto-decompresses the response body but keeps Content-Encoding.
-    // Strip it to prevent browser double-decompression (ERR_CONTENT_DECODING_FAILED).
-    const headers = new Headers(response.headers)
-    headers.delete("content-encoding")
-    headers.delete("transfer-encoding")
-    headers.delete("content-length")
-
-    return new Response(response.body, {
-      status: response.status,
-      statusText: response.statusText,
-      headers,
-    })
+    return response
   } catch (error) {
     return new Response(
       JSON.stringify({
