@@ -7,7 +7,38 @@ COPY src/ ./src/
 RUN bun install --frozen-lockfile && \
     bun build src/server.ts --target=bun --outdir=dist
 
-# ── Stage 2: Runtime ─────────────────────────────────────────
+# ── Stage 2: Fetch forgejo-mcp pre-built binary ──────────────
+FROM debian:12-slim AS forgejo-mcp-fetcher
+
+ARG FORGEJO_MCP_VERSION=v0.0.7
+ARG TARGETARCH
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Pre-built binaries are published per-arch on the upstream releases page;
+# we verify the sha1 sum that ships alongside each asset before installing.
+# Sha1 is what upstream provides - not ideal vs sha256 but better than nothing,
+# and the binary is also fetched over TLS from github.com.
+RUN set -eux; \
+    case "${TARGETARCH:-amd64}" in \
+        amd64) ARCH=amd64 ;; \
+        arm64) ARCH=arm64 ;; \
+        *) echo "Unsupported TARGETARCH: ${TARGETARCH}" >&2; exit 1 ;; \
+    esac; \
+    BASE="https://github.com/raohwork/forgejo-mcp/releases/download/${FORGEJO_MCP_VERSION}"; \
+    curl -fsSL -o /tmp/forgejo-mcp "${BASE}/forgejo-mcp.linux.${ARCH}"; \
+    curl -fsSL -o /tmp/forgejo-mcp.sha1 "${BASE}/forgejo-mcp.linux.${ARCH}.sha1"; \
+    EXPECTED=$(cut -d' ' -f1 /tmp/forgejo-mcp.sha1); \
+    ACTUAL=$(sha1sum /tmp/forgejo-mcp | cut -d' ' -f1); \
+    if [ "$EXPECTED" != "$ACTUAL" ]; then \
+        echo "forgejo-mcp checksum mismatch: expected=$EXPECTED actual=$ACTUAL" >&2; \
+        exit 1; \
+    fi; \
+    chmod +x /tmp/forgejo-mcp
+
+# ── Stage 3: Runtime ─────────────────────────────────────────
 FROM oven/bun:1-slim
 
 ARG OPENCODE_VERSION=1.14.31
@@ -38,15 +69,16 @@ RUN useradd --create-home --shell /bin/bash opencode && \
     mkdir -p /workspace /home/opencode/.config/opencode/plugins /home/opencode/.local/share/opencode && \
     chown -R opencode:opencode /workspace /home/opencode
 
-# ── Copy configs, proxy, plugin, entrypoint ──
+# ── Copy configs, proxy, plugin, entrypoint, MCP binary ──
 COPY config/opencode.json /home/opencode/.config/opencode/opencode.json
 COPY config/oh-my-opencode.json /home/opencode/.config/opencode/oh-my-opencode.json
 COPY --from=proxy-builder /build/dist/server.js /app/proxy.js
+COPY --from=forgejo-mcp-fetcher /tmp/forgejo-mcp /usr/local/bin/forgejo-mcp
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 COPY --chown=opencode:opencode plugin/ /home/opencode/.config/opencode/plugins/
 COPY --chown=opencode:opencode .opencode/plugins/ /home/opencode/.config/opencode/plugins/
 
-RUN chmod +x /docker-entrypoint.sh && \
+RUN chmod +x /docker-entrypoint.sh /usr/local/bin/forgejo-mcp && \
     chown -R opencode:opencode /home/opencode/.config/opencode && \
     chmod -R a-w /usr/local/bin 2>/dev/null || true
 
