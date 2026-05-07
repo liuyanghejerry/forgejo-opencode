@@ -179,19 +179,40 @@ opencode serve --port 4096  # 另开终端启动 OpenCode
 
 Docker 镜像包含完整技术栈：**OpenCode + oh-my-openagent + Forgejo OAuth2 代理**，开箱即用。
 
+预构建镜像发布在 Forgejo Container Registry：
+
+```bash
+docker pull forgejo.draw.live/jerry/forgejo-opencode:latest
+```
+
+#### 快速启动
+
 ```bash
 # 1. 配置环境变量
 cp .env.example .env
 # 编辑 .env 填入 Forgejo OAuth2 凭证和 JWT_SECRET
 
-# 2. 创建 workspace 目录
+# 2. 拉取镜像并启动（无需克隆仓库）
+mkdir forgejo-opencode && cd forgejo-opencode
+curl -O https://forgejo.draw.live/jerry/forgejo-opencode/raw/branch/main/docker-compose.yml
 mkdir -p workspace
 
-# 3. 构建并启动
+# 3. 启动
 docker compose up -d
 
 # 4. 访问
 open http://localhost:3000
+```
+
+#### 从源码构建
+
+```bash
+git clone https://forgejo.draw.live/jerry/forgejo-opencode.git
+cd forgejo-opencode
+cp .env.example .env
+
+# 编辑 docker-compose.yml：注释 image: 行，取消注释 build: 行
+docker compose up -d --build
 ```
 
 容器内运行两个进程：
@@ -235,6 +256,32 @@ OMO_VERSION=3.17.5         # 默认
 # 修改 .env 中的版本号，重建镜像
 OPENCODE_VERSION=1.15.0 OMO_VERSION=3.18.0 docker compose build --no-cache
 docker compose up -d
+```
+
+#### 发布镜像到 Forgejo Container Registry
+
+**自动发布（Forgejo Actions）**
+
+推送代码到 `main` 分支或打 tag 会自动触发构建和发布：
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+工作流配置在 `.forgejo/workflows/docker-publish.yml`。需要在 Forgejo 仓库设置中添加 Secret：
+- `FORGEJO_TOKEN`：具有 `read:container` 和 `write:container` 权限的令牌
+
+**手动发布**
+
+```bash
+# 1. 在 forgejo.draw.live 生成访问令牌
+#    设置 → 应用 → 生成令牌 → 勾选 read:container, write:container
+
+# 2. 构建并推送
+export FORGEJO_TOKEN=your-token
+./scripts/build-and-push.sh          # 推送 :latest
+./scripts/build-and-push.sh v1.0.0   # 推送版本标签
 ```
 
 #### 持久化数据
