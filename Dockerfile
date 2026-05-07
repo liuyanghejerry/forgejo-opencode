@@ -18,15 +18,23 @@ LABEL org.opencontainers.image.description="OpenCode + oh-my-openagent + Forgejo
 LABEL org.opencontainers.image.source="https://github.com/liuyanghejerry/forgejo-opencode"
 LABEL org.opencontainers.image.version="${OPENCODE_VERSION}"
 
-# ── Install system deps + OpenCode + omo in one layer, then cleanup ──
+# ── Install system deps ──
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl ca-certificates git openssh-client tmux \
-    && rm -rf /var/lib/apt/lists/* \
-    && bun install -g opencode-ai@${OPENCODE_VERSION} \
-    && bunx oh-my-opencode@${OMO_VERSION} install --no-tui --claude=no --chatgpt=no --gemini=no || true \
-    && rm -rf /root/.bun/install/cache /root/.cache /tmp/*
+    && rm -rf /var/lib/apt/lists/*
 
-ENV PATH="/root/.local/bin:${PATH}"
+# ── Install OpenCode (pinned version) ──
+RUN bun install -g opencode-ai@${OPENCODE_VERSION}
+
+# ── Install oh-my-openagent (pinned version, non-interactive) ──
+RUN bunx oh-my-opencode@${OMO_VERSION} install --no-tui || true
+
+# ── Cleanup caches ──
+RUN rm -rf /root/.bun/install/cache /root/.cache /tmp/*
+
+# ── Ensure bun global bin is on PATH for all users ──
+ENV BUN_INSTALL=/root/.bun
+ENV PATH="/root/.bun/bin:${PATH}"
 
 # ── Create non-root user ──
 RUN useradd --create-home --shell /bin/bash opencode && \
@@ -43,7 +51,7 @@ COPY --chown=opencode:opencode .opencode/plugins/ /home/opencode/.config/opencod
 
 RUN chmod +x /docker-entrypoint.sh && \
     chown -R opencode:opencode /home/opencode/.config/opencode && \
-    chmod -R a-w /root/.local/lib/node_modules /root/.local/bin 2>/dev/null || true
+    chmod -R a-w /root/.bun 2>/dev/null || true
 
 EXPOSE 3000 4096
 WORKDIR /workspace
