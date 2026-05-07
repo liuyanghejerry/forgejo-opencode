@@ -69,7 +69,9 @@ export async function buildAuthorizationUrl(
     state,
     code_challenge: codeChallenge,
     code_challenge_method: "S256",
-    scope: "read:user",
+    // Scopes required for the bundled forgejo-mcp tools to operate on behalf
+    // of the user: read identity, manage repositories, manage issues.
+    scope: "read:user write:repository write:issue",
   })
 
   const url = `${config.forgejoUrl}/login/oauth/authorize?${params.toString()}`
