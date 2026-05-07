@@ -15,7 +15,7 @@ ARG OMO_VERSION=3.17.5
 
 LABEL org.opencontainers.image.title="forgejo-opencode-oauth2"
 LABEL org.opencontainers.image.description="OpenCode + oh-my-openagent + Forgejo OAuth2 Proxy"
-LABEL org.opencontainers.image.source="https://forgejo.draw.live/jerry/forgejo-opencode"
+LABEL org.opencontainers.image.source="https://github.com/liuyanghejerry/forgejo-opencode"
 LABEL org.opencontainers.image.version="${OPENCODE_VERSION}"
 
 # ── Install system deps + OpenCode + omo in one layer, then cleanup ──
