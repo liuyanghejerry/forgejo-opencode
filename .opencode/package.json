@@ -1,0 +1,12 @@
+{
+  "name": "forgejo-opencode-oauth2-plugin",
+  "version": "1.0.0",
+  "description": "OpenCode plugin for Forgejo OAuth2 proxy integration",
+  "type": "module",
+  "exports": {
+    ".": "./plugin/forgejo-oauth.ts"
+  },
+  "dependencies": {},
+  "keywords": ["opencode", "forgejo", "oauth2", "plugin"],
+  "license": "MIT"
+}
