@@ -46,14 +46,14 @@ opencode serve \
 OPENCODE_PID=$!
 
 # Wait for OpenCode to be ready
-echo "[INFO] Waiting for OpenCode server to be ready..."
+echo "[INFO] Waiting for OpenCode server..."
 for i in $(seq 1 30); do
-    if curl -s "http://localhost:${OPENCODE_PORT}/health" > /dev/null 2>&1; then
+    if curl -s -o /dev/null -w "%{http_code}" "http://localhost:${OPENCODE_PORT}/" | grep -qE "^(200|302|303)$"; then
         echo "[INFO] OpenCode server is ready."
         break
     fi
     if [ $i -eq 30 ]; then
-        echo "[WARN] OpenCode server may not be ready yet, proceeding anyway..."
+        echo "[WARN] OpenCode server may not be ready, proceeding..."
     fi
     sleep 1
 done

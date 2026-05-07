@@ -52,5 +52,4 @@ RUN chmod +x /docker-entrypoint.sh && \
 
 EXPOSE 3000 4096
 WORKDIR /workspace
-USER opencode
 ENTRYPOINT ["/docker-entrypoint.sh"]
