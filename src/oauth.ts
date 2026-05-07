@@ -86,25 +86,60 @@ export async function handleCallback(
   config: Config,
   code: string,
   state: string
-): Promise<{ user: ForgejoUser; returnTo: string }> {
-  // Verify state
+): Promise<{ user: ForgejoUser; returnTo: string; tokens: OAuth2Tokens }> {
   const stored = stateStore.get(state)
   if (!stored) {
     throw new OAuthError("invalid_state", "OAuth2 state parameter is missing or expired")
   }
 
   const returnTo = stored.returnTo
-
-  // Clean up state
   stateStore.delete(state)
 
-  // Exchange code for tokens
   const tokens = await exchangeCodeForTokens(config, code, stored.codeVerifier)
-
-  // Fetch user info
   const user = await fetchUserInfo(config, tokens.access_token)
 
-  return { user, returnTo }
+  return { user, returnTo, tokens }
+}
+
+/**
+ * Exchange a refresh token for a fresh access token. Used by the token bridge
+ * when the stored access token is near expiry.
+ */
+export async function refreshAccessToken(
+  config: Config,
+  refreshToken: string,
+): Promise<OAuth2Tokens> {
+  const body = new URLSearchParams({
+    client_id: config.clientId,
+    client_secret: config.clientSecret,
+    grant_type: "refresh_token",
+    refresh_token: refreshToken,
+  })
+
+  const response = await fetch(`${config.forgejoUrl}/login/oauth/access_token`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      Accept: "application/json",
+    },
+    body: body.toString(),
+  })
+
+  if (!response.ok) {
+    throw new OAuthError(
+      "refresh_failed",
+      `Refresh token exchange returned HTTP ${response.status}`,
+    )
+  }
+
+  const data = (await response.json()) as Record<string, unknown>
+  if ("error" in data) {
+    throw new OAuthError(
+      String(data.error || "refresh_failed"),
+      String(data.error_description || "Failed to refresh access token"),
+    )
+  }
+  return data as unknown as OAuth2Tokens
 }
 
 /**

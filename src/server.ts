@@ -11,6 +11,7 @@ import { buildAuthorizationUrl, handleCallback, OAuthError } from "./oauth"
 import { createSessionToken, buildSessionCookie, buildClearSessionCookie } from "./session"
 import { proxyToOpenCode, authMiddleware } from "./proxy"
 import { createRateLimiter, getClientIp } from "./ratelimit"
+import { TokenStore } from "./tokenstore"
 
 const app = new Hono<{ Variables: { clientIp: string } }>()
 
@@ -33,6 +34,8 @@ try {
     refillPerSecond: config.proxyRateLimitPerMinute / 60,
     maxKeys: 10_000,
   })
+
+  const tokenStore = new TokenStore(config.tokenStoreDir, config.jwtSecret)
 
   function rateLimitResponse(retryAfterSec: number): Response {
     return new Response(
@@ -97,9 +100,8 @@ try {
     }
 
     try {
-      const { user, returnTo } = await handleCallback(config, code, state)
+      const { user, returnTo, tokens } = await handleCallback(config, code, state)
 
-      // Check access control
       if (config.allowedUsers.length > 0 && !config.allowedUsers.includes(user.username)) {
         console.warn(`Access denied for user: ${user.username} (not in allowlist)`)
         return c.text(
@@ -108,7 +110,24 @@ try {
         )
       }
 
-      // Create session
+      // Persist tokens for the bundled forgejo-mcp bridge. Failures here must
+      // not block login - MCP is an optional capability layered on top of auth.
+      try {
+        const ttl = tokens.expires_in ?? 3600
+        await tokenStore.save({
+          username: user.username,
+          accessToken: tokens.access_token,
+          refreshToken: tokens.refresh_token,
+          expiresAt: Math.floor(Date.now() / 1000) + ttl,
+          updatedAt: Math.floor(Date.now() / 1000),
+        })
+      } catch (storeErr) {
+        console.error(
+          `[token-store] Failed to persist tokens for ${user.username}:`,
+          storeErr,
+        )
+      }
+
       const token = await createSessionToken(
         {
           sub: String(user.id),

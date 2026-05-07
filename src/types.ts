@@ -74,6 +74,7 @@ export interface Config {
   behindProxy: boolean
   authRateLimitPerMinute: number
   proxyRateLimitPerMinute: number
+  tokenStoreDir: string
 }
 
 /** Error response for OAuth2 failures */

@@ -33,6 +33,9 @@ export function loadConfig(): Config {
     120,
     "PROXY_RATE_LIMIT_PER_MINUTE",
   )
+  const tokenStoreDir =
+    process.env.FORGEJO_TOKEN_STORE_DIR ||
+    `${process.env.HOME || "/home/opencode"}/.local/share/forgejo-oauth`
 
   // Validate required configuration
   const errors: string[] = []
@@ -93,6 +96,7 @@ export function loadConfig(): Config {
     behindProxy,
     authRateLimitPerMinute,
     proxyRateLimitPerMinute,
+    tokenStoreDir,
   }
 }
 
@@ -127,5 +131,6 @@ export function logConfig(config: Config): void {
   if (config.behindProxy) {
     console.log("║ Behind proxy:         true (secure cookies enabled)")
   }
+  console.log(`║ Token store dir:      ${config.tokenStoreDir}`)
   console.log("╚══════════════════════════════════════════════════════╝")
 }
