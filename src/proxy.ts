@@ -53,7 +53,19 @@ export async function proxyToOpenCode(
 
   try {
     const response = await fetch(proxyRequest)
-    return response
+
+    // Bun fetch auto-decompresses the response body but keeps Content-Encoding.
+    // Strip it to prevent browser double-decompression (ERR_CONTENT_DECODING_FAILED).
+    const headers = new Headers(response.headers)
+    headers.delete("content-encoding")
+    headers.delete("transfer-encoding")
+    headers.delete("content-length")
+
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers,
+    })
   } catch (error) {
     return new Response(
       JSON.stringify({
