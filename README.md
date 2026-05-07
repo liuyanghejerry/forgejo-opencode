@@ -139,6 +139,29 @@ opencode serve --port 4096
 
 **加载方式**：将 `plugin/forgejo-oauth.ts` 放入项目或全局的 `.opencode/plugins/` 目录，或添加到 `opencode.json` 的 `plugin` 列表中。
 
+## Forgejo MCP（OpenCode 直接访问 Forgejo）
+
+Docker 镜像内置了 [forgejo-mcp](https://github.com/raohwork/forgejo-mcp) v0.0.7，让 OpenCode agents 可以直接读写 Forgejo 仓库、Issue、PR——使用**当前登录用户**的 OAuth token，无需额外配置 PAT。
+
+**工作原理：**
+1. 用户通过 OAuth 登录后，access_token 被加密（AES-256-GCM）持久化到 `~/.local/share/forgejo-oauth/{username}.json`，并更新 `latest.txt` 指针
+2. OpenCode 启动 MCP server 时调用 `/usr/local/bin/forgejo-mcp-bridge`
+3. Bridge 读取最近登录用户的 token，若距过期 < 5 分钟则用 refresh_token 自动续期
+4. 设置 `FORGEJOMCP_SERVER` + `FORGEJOMCP_TOKEN` 后 `exec` 真实的 `forgejo-mcp stdio` 二进制
+
+**单用户模型（latest-wins）：** 若多人共用同一容器，最近登录者的身份会覆盖之前的。设计上仅适合单用户部署。
+
+**OAuth scopes（重要）：** 启用 MCP 后 scope 扩展为 `read:user write:repository write:issue`。**老用户必须重新登录一次**才能授权这些新权限——访问 `/auth/logout` 后再登录即可。
+
+**配置变量：**
+
+| 环境变量 | 默认值 | 说明 |
+|---|---|---|
+| `FORGEJO_TOKEN_STORE_DIR` | `~/.local/share/forgejo-oauth` | OAuth token 加密存储目录 |
+| `FORGEJO_MCP_VERSION` | `v0.0.7` | 镜像构建时使用的 forgejo-mcp 版本（构建参数） |
+
+**禁用 MCP：** 删除 `config/opencode.json` 中的 `mcp.forgejo` 块，或在该块内设置 `"enabled": false`。
+
 ## 安全考虑
 
 - **PKCE**：使用 SHA-256 的 Proof Key for Code Exchange，防止授权码拦截
@@ -290,6 +313,7 @@ export REGISTRY_TOKEN=your-token
 |---|---|---|
 | `opencode-config` | `/home/opencode/.config/opencode` | 插件配置、模型设置 |
 | `opencode-data` | `/home/opencode/.local/share/opencode` | 认证令牌、会话数据 |
+| `forgejo-oauth` | `/home/opencode/.local/share/forgejo-oauth` | Forgejo OAuth token 加密存储（MCP 使用） |
 | `./workspace` | `/workspace` | 项目代码 |
 
 #### 在云端部署

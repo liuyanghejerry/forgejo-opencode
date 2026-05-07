@@ -52,6 +52,7 @@ services:
     volumes:
       - opencode-config:/home/opencode/.config/opencode
       - opencode-data:/home/opencode/.local/share/opencode
+      - forgejo-oauth:/home/opencode/.local/share/forgejo-oauth
       - ${WORKSPACE_DIR:-./workspace}:/workspace
       - ${SSH_KEY_PATH:-~/.ssh/id_ed25519}:/home/opencode/.ssh/id_ed25519:ro
     healthcheck:
@@ -64,3 +65,4 @@ services:
 volumes:
   opencode-config:
   opencode-data:
+  forgejo-oauth:

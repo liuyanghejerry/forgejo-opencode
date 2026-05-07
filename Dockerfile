@@ -5,7 +5,8 @@ WORKDIR /build
 COPY package.json bun.lock tsconfig.json ./
 COPY src/ ./src/
 RUN bun install --frozen-lockfile && \
-    bun build src/server.ts --target=bun --outdir=dist
+    bun build src/server.ts --target=bun --outdir=dist && \
+    bun build src/mcp-bridge.ts --target=bun --outdir=dist
 
 # ── Stage 2: Fetch forgejo-mcp pre-built binary ──────────────
 FROM debian:12-slim AS forgejo-mcp-fetcher
@@ -73,10 +74,17 @@ RUN useradd --create-home --shell /bin/bash opencode && \
 COPY config/opencode.json /home/opencode/.config/opencode/opencode.json
 COPY config/oh-my-opencode.json /home/opencode/.config/opencode/oh-my-opencode.json
 COPY --from=proxy-builder /build/dist/server.js /app/proxy.js
+COPY --from=proxy-builder /build/dist/mcp-bridge.js /app/mcp-bridge.js
 COPY --from=forgejo-mcp-fetcher /tmp/forgejo-mcp /usr/local/bin/forgejo-mcp
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 COPY --chown=opencode:opencode plugin/ /home/opencode/.config/opencode/plugins/
 COPY --chown=opencode:opencode .opencode/plugins/ /home/opencode/.config/opencode/plugins/
+
+# Wrapper that lets OpenCode launch the bridge as a single command. The bridge
+# itself is a Bun-bundled program that loads the user's stored OAuth token
+# and execs forgejo-mcp with the right env vars.
+RUN printf '#!/bin/sh\nexec bun run /app/mcp-bridge.js "$@"\n' > /usr/local/bin/forgejo-mcp-bridge && \
+    chmod +x /usr/local/bin/forgejo-mcp-bridge
 
 RUN chmod +x /docker-entrypoint.sh /usr/local/bin/forgejo-mcp && \
     chown -R opencode:opencode /home/opencode/.config/opencode && \
