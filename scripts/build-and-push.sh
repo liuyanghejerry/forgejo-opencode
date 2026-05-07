@@ -19,20 +19,20 @@ echo " omo:     v${OMO_VERSION}"
 echo "============================================"
 echo ""
 
-if [ -z "${FORGEJO_TOKEN:-}" ]; then
-    echo "[ERROR] FORGEJO_TOKEN is not set."
+if [ -z "${REGISTRY_TOKEN:-}" ]; then
+    echo "[ERROR] REGISTRY_TOKEN is not set."
     echo ""
     echo "Generate a token at: https://forgejo.draw.live/user/settings/applications"
     echo "Required scopes: read:container, write:container"
     echo ""
     echo "Then run:"
-    echo "  export FORGEJO_TOKEN=your-token-here"
+    echo "  export REGISTRY_TOKEN=your-token-here"
     echo "  ./scripts/build-and-push.sh"
     exit 1
 fi
 
 echo "[1/3] Logging in to Forgejo Container Registry..."
-echo "$FORGEJO_TOKEN" | docker login "$REGISTRY" --username jerry --password-stdin
+echo "$REGISTRY_TOKEN" | docker login "$REGISTRY" --username jerry --password-stdin
 
 echo "[2/3] Building image..."
 docker build \

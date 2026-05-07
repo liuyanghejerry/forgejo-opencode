@@ -270,7 +270,7 @@ git push origin v1.0.0
 ```
 
 工作流配置在 `.forgejo/workflows/docker-publish.yml`。需要在 Forgejo 仓库设置中添加 Secret：
-- `FORGEJO_TOKEN`：具有 `read:container` 和 `write:container` 权限的令牌
+- `REGISTRY_TOKEN`：具有 `read:container` 和 `write:container` 权限的令牌
 
 **手动发布**
 
@@ -279,7 +279,7 @@ git push origin v1.0.0
 #    设置 → 应用 → 生成令牌 → 勾选 read:container, write:container
 
 # 2. 构建并推送
-export FORGEJO_TOKEN=your-token
+export REGISTRY_TOKEN=your-token
 ./scripts/build-and-push.sh          # 推送 :latest
 ./scripts/build-and-push.sh v1.0.0   # 推送版本标签
 ```
