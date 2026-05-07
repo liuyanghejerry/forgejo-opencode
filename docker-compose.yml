@@ -1,20 +1,27 @@
+# For local development: build from source
+# For production: use the pre-built image from Forgejo Container Registry
+
 version: "3.8"
 
 services:
   opencode:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        OPENCODE_VERSION: ${OPENCODE_VERSION:-1.14.31}
-        OMO_VERSION: ${OMO_VERSION:-3.17.5}
+    # ── Option A: Use pre-built image (production) ──
+    image: forgejo.draw.live/jerry/forgejo-opencode:latest
+
+    # ── Option B: Build from source (development) ──
+    # Comment out `image:` above and uncomment `build:` below:
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile
+    #   args:
+    #     OPENCODE_VERSION: ${OPENCODE_VERSION:-1.14.31}
+    #     OMO_VERSION: ${OMO_VERSION:-3.17.5}
+
     container_name: forgejo-opencode
     restart: unless-stopped
     ports:
-      - "${OAUTH2_PROXY_PORT:-3000}:3000" # OAuth2 proxy (public)
-      # OpenCode server port is internal only, accessed via proxy
+      - "${OAUTH2_PROXY_PORT:-3000}:3000"
     environment:
-      # ── OAuth2 Proxy ──
       - OAUTH2_PROXY_PORT=3000
       - OAUTH2_PROXY_HOST=0.0.0.0
       - OPENCODE_BACKEND_URL=http://localhost:4096
@@ -28,22 +35,16 @@ services:
       - FORGEJO_ALLOWED_ORGS=${FORGEJO_ALLOWED_ORGS:-}
       - COOKIE_DOMAIN=${COOKIE_DOMAIN:-}
       - BEHIND_PROXY=${BEHIND_PROXY:-false}
-      # ── OpenCode ──
       - OPENCODE_PORT=4096
       - OPENCODE_HOSTNAME=0.0.0.0
-      # ── LLM Provider Keys (optional, can use auth.json mount instead) ──
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
       - GITHUB_TOKEN=${GITHUB_TOKEN:-}
     volumes:
-      # Persist OpenCode config (providers, models, plugins)
       - opencode-config:/home/opencode/.config/opencode
-      # Persist auth tokens and sessions
       - opencode-data:/home/opencode/.local/share/opencode
-      # Mount workspace for your projects
       - ${WORKSPACE_DIR:-./workspace}:/workspace
-      # Optional: SSH key for git operations
       - ${SSH_KEY_PATH:-~/.ssh/id_ed25519}:/home/opencode/.ssh/id_ed25519:ro
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/auth/status"]
