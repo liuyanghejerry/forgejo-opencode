@@ -19,6 +19,14 @@ services:
 
     container_name: forgejo-opencode
     restart: unless-stopped
+    # ── Run as root required by Bun-compiled OpenCode ARM64 binary ──
+    # The native binary's HTTP server fails to respond under non-root in containers.
+    # Compensated by: read-only rootfs, no-new-privileges, dropped capabilities.
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:exec
     ports:
       - "${OAUTH2_PROXY_PORT:-3000}:3000"
     environment:
