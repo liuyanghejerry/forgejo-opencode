@@ -23,6 +23,16 @@ export function loadConfig(): Config {
     .filter(Boolean)
   const cookieDomain = process.env.COOKIE_DOMAIN || undefined
   const behindProxy = process.env.BEHIND_PROXY === "true"
+  const authRateLimitPerMinute = parsePositiveInt(
+    process.env.AUTH_RATE_LIMIT_PER_MINUTE,
+    20,
+    "AUTH_RATE_LIMIT_PER_MINUTE",
+  )
+  const proxyRateLimitPerMinute = parsePositiveInt(
+    process.env.PROXY_RATE_LIMIT_PER_MINUTE,
+    120,
+    "PROXY_RATE_LIMIT_PER_MINUTE",
+  )
 
   // Validate required configuration
   const errors: string[] = []
@@ -81,7 +91,18 @@ export function loadConfig(): Config {
     allowedOrgs,
     cookieDomain,
     behindProxy,
+    authRateLimitPerMinute,
+    proxyRateLimitPerMinute,
   }
+}
+
+function parsePositiveInt(raw: string | undefined, fallback: number, name: string): number {
+  if (raw === undefined || raw === "") return fallback
+  const n = Number.parseInt(raw, 10)
+  if (!Number.isFinite(n) || n <= 0) {
+    throw new Error(`${name} must be a positive integer (got: ${raw})`)
+  }
+  return n
 }
 
 /** Log configuration on startup (masking secrets) */

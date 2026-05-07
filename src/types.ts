@@ -72,6 +72,8 @@ export interface Config {
   allowedOrgs: string[]
   cookieDomain?: string
   behindProxy: boolean
+  authRateLimitPerMinute: number
+  proxyRateLimitPerMinute: number
 }
 
 /** Error response for OAuth2 failures */

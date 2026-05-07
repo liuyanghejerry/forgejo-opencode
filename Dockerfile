@@ -50,6 +50,8 @@ RUN chmod +x /docker-entrypoint.sh && \
     chown -R opencode:opencode /home/opencode/.config/opencode && \
     chmod -R a-w /usr/local/bin 2>/dev/null || true
 
-EXPOSE 3000 4096
+# Only expose the OAuth2 proxy port. The OpenCode backend listens on 127.0.0.1
+# inside the container and must NEVER be reached without going through the proxy.
+EXPOSE 3000
 WORKDIR /workspace
 ENTRYPOINT ["/docker-entrypoint.sh"]
