@@ -6,7 +6,7 @@ version: "3.8"
 services:
   opencode:
     # ── Option A: Use pre-built image (production) ──
-    image: forgejo.draw.live/jerry/forgejo-opencode:latest
+    image: ghcr.io/liuyanghejerry/forgejo-opencode:latest
 
     # ── Option B: Build from source (development) ──
     # Comment out `image:` above and uncomment `build:` below:
