@@ -24,17 +24,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # ── Install OpenCode (pinned version) ──
+ENV BUN_INSTALL=/usr/local
 RUN bun install -g opencode-ai@${OPENCODE_VERSION}
 
 # ── Install oh-my-openagent (pinned version, non-interactive) ──
 RUN bunx oh-my-opencode@${OMO_VERSION} install --no-tui || true
 
 # ── Cleanup caches ──
-RUN rm -rf /root/.bun/install/cache /root/.cache /tmp/*
-
-# ── Ensure bun global bin is on PATH for all users ──
-ENV BUN_INSTALL=/root/.bun
-ENV PATH="/root/.bun/bin:${PATH}"
+RUN rm -rf /root/.cache /tmp/*
 
 # ── Create non-root user ──
 RUN useradd --create-home --shell /bin/bash opencode && \
@@ -51,7 +48,7 @@ COPY --chown=opencode:opencode .opencode/plugins/ /home/opencode/.config/opencod
 
 RUN chmod +x /docker-entrypoint.sh && \
     chown -R opencode:opencode /home/opencode/.config/opencode && \
-    chmod -R a-w /root/.bun 2>/dev/null || true
+    chmod -R a-w /usr/local/bin 2>/dev/null || true
 
 EXPOSE 3000 4096
 WORKDIR /workspace
